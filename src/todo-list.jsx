@@ -62,7 +62,14 @@ function RenderInputToAddTodo(props) {
   }
 
 function TodoList() {
-  const [todoList, setTodoList] = React.useState([]);
+  const [todoList, setTodoList] = React.useState(() => {
+    const savedTodos = localStorage.getItem("todos");
+    return savedTodos ? JSON.parse(savedTodos) : [];
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem("todos", JSON.stringify(todoList));
+  }, [todoList]);
 
   const onAddTodo = (newTodo) => {
     if (!newTodo || newTodo.trim() === '') return;
