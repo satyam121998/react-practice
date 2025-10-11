@@ -1,6 +1,7 @@
 import './App.css';
 import PractiseApp from './practise-app';
 import TodoList from './todo-list';
+import UserManagement from './user-management';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 function App() {
@@ -9,6 +10,7 @@ function App() {
       <Routes>
         <Route path="/" element={<PractiseApp />} />
         <Route path="/todo" element={<TodoList />} />
+        <Route path="/user" element={<UserManagement />} />
       </Routes>
     </BrowserRouter>
   );
