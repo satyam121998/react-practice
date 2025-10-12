@@ -152,7 +152,7 @@ function RenderUserTable() {
   );
 }
 
-function UserManagement() {
+function UserManagementWithContext() {
   return (
     <div>
       <h1>User Management</h1>
@@ -161,4 +161,4 @@ function UserManagement() {
   );
 }
 
-export default UserManagement;
+export default UserManagementWithContext;
