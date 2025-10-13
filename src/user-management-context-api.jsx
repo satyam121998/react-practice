@@ -1,51 +1,26 @@
 import React from "react";
 import './user-management.css';
 
+// create context
+const UserContext = React.createContext();
 
-function SearchUsers(props) {
+// create custom hook
+const useUserState = () => {
+  const context = React.useContext(UserContext);
+  if (!context) {
+    throw new Error("useUserState must be used in the UserProvider");
+  }
+  return context;
+};
 
-  const handleInputChange = (event) => {
-    props.setSearchText(event.target.value);
-  };
-
-  React.useEffect(() => {
-    // Debounce for the search
-    const timeoutId = setTimeout(() => {
-      if (props.searchText) {
-        props.handleUserSearch(props.searchText);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [props]);
-
-  return (
-    <div>
-      <span>
-      <input type="text" placeholder="Search users..." onChange={handleInputChange}/>
-      {/* <button onClick={() => {props.handleUserSearch(props.searchText)}}>Search</button> */}
-      </span>
-    </div>
-  );
-}
-
-function RenderUserTable() {
-
+// create User provider
+const UserProvider = ({ children }) => {
   const [searchText, setSearchText] = React.useState("");
   const [users, setUsers] = React.useState([]);
   const [filteredUsers, setFilteredUsers] = React.useState([]);
   const [displayUsers, setDisplayUsers] = React.useState([]);
   const [pageNumber, setPageNumber] = React.useState(1);
   const [pageSize] = React.useState(5);
-
-  const totalPages = Math.ceil(filteredUsers.length / pageSize);
-
-  // calculation for pagination
-  React.useEffect(() => {
-    const startIndex = (pageNumber - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    setDisplayUsers(filteredUsers.slice(startIndex, endIndex));
-  }, [pageNumber, pageSize, filteredUsers]);
 
   // This is handling the search for username, username or email
   const handleUserSearch = React.useCallback((searchText) => {
@@ -62,39 +37,114 @@ function RenderUserTable() {
     setPageNumber(1);
   }, [users]);
 
+  const value = {
+    searchText,
+    users,
+    filteredUsers,
+    displayUsers,
+    pageNumber,
+    pageSize,
+
+    // actions
+    setSearchText,
+    setUsers,
+    setFilteredUsers,
+    setDisplayUsers,
+    setPageNumber,
+    handleUserSearch
+  };
+
+  return (
+    <UserContext.Provider value={value}>
+      {children}
+    </UserContext.Provider>
+  );
+};
+
+function SearchUsers() {
+  const { setSearchText, searchText, handleUserSearch } = useUserState();
+  const handleInputChange = (event) => {
+    setSearchText(event.target.value);
+  };
+
+  React.useEffect(() => {
+    // Debounce for the search
+    const timeoutId = setTimeout(() => {
+      if (searchText) {
+        handleUserSearch(searchText);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchText, setSearchText, handleUserSearch]);
+
+  return (
+    <div>
+      <span>
+        <input type="text" placeholder="Search users..." onChange={handleInputChange} />
+        {/* <button onClick={() => {props.handleUserSearch(props.searchText)}}>Search</button> */}
+      </span>
+    </div>
+  );
+}
+
+function RenderUserTable() {
+
+  const {
+    searchText,
+    setUsers,
+    filteredUsers,
+    setFilteredUsers,
+    displayUsers,
+    setDisplayUsers,
+    pageNumber,
+    setPageNumber,
+    pageSize
+  } = useUserState();
+
+  const totalPages = Math.ceil(filteredUsers.length / pageSize);
+
+  // calculation for pagination
+  React.useEffect(() => {
+    const startIndex = (pageNumber - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    setDisplayUsers(filteredUsers.slice(startIndex, endIndex));
+  }, [pageNumber, pageSize, filteredUsers, setDisplayUsers, setFilteredUsers, setPageNumber]);
+
   React.useEffect(() => {
     const storedUsers = localStorage.getItem('users');
+
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users');
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const usersData = await response.json();
+        setUsers(usersData);
+        setFilteredUsers(usersData);
+        localStorage.setItem('users', JSON.stringify(usersData));
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+
     if (searchText === "") {
-      if (storedUsers?.length > 0) {
-        setUsers(JSON.parse(storedUsers));
-        setFilteredUsers(JSON.parse(storedUsers));
+      if (storedUsers && storedUsers !== "[]") {
+        const parsedUsers = JSON.parse(storedUsers);
+        setUsers(parsedUsers);
+        setFilteredUsers(parsedUsers);
       } else {
-        const fetchUsers = async() => {
-          try {
-            const response = await fetch('https://jsonplaceholder.typicode.com/users');
-
-            if (!response.ok) {
-              throw new Error('Network response was not ok');
-            }
-
-            setUsers(await response.json());
-            setFilteredUsers(users);
-            localStorage.setItem('users', JSON.stringify(users));
-
-          }
-
-          catch (error) {
-            console.error('Error fetching users:', error);
-          }
-        };
-
         fetchUsers();
       }
     }
-  }, [users, searchText]);
+  }, [searchText, setFilteredUsers, setUsers]);
+
   return (
     <div>
-      <SearchUsers handleUserSearch={handleUserSearch} searchText={searchText} setSearchText={setSearchText}/>
+      <SearchUsers />
       <div className="user-management-root">
         <table className="user-table">
           <thead className="table-head table-head-light">
@@ -134,7 +184,7 @@ function RenderUserTable() {
         </table>
       </div>
       <div className="pagination-controls">
-        <button 
+        <button
           onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
           disabled={pageNumber === 1}
         >
@@ -155,8 +205,10 @@ function RenderUserTable() {
 function UserManagementWithContext() {
   return (
     <div>
-      <h1>User Management</h1>
-      <RenderUserTable />
+      <UserProvider>
+        <h1>User Management</h1>
+        <RenderUserTable />
+      </UserProvider>
     </div>
   );
 }

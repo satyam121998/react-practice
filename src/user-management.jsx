@@ -64,34 +64,35 @@ function RenderUserTable() {
 
   React.useEffect(() => {
     const storedUsers = localStorage.getItem('users');
+
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users');
+
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const usersData = await response.json();
+        setUsers(usersData);
+        setFilteredUsers(usersData);
+        localStorage.setItem('users', JSON.stringify(usersData));
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+
     if (searchText === "") {
-      if (storedUsers?.length > 0) {
-        setUsers(JSON.parse(storedUsers));
-        setFilteredUsers(JSON.parse(storedUsers));
+      if (storedUsers &&storedUsers !== "[]") {
+        const parsedUsers = JSON.parse(storedUsers);
+        setUsers(parsedUsers);
+        setFilteredUsers(parsedUsers);
       } else {
-        const fetchUsers = async() => {
-          try {
-            const response = await fetch('https://jsonplaceholder.typicode.com/users');
-
-            if (!response.ok) {
-              throw new Error('Network response was not ok');
-            }
-
-            setUsers(await response.json());
-            setFilteredUsers(users);
-            localStorage.setItem('users', JSON.stringify(users));
-
-          }
-
-          catch (error) {
-            console.error('Error fetching users:', error);
-          }
-        };
-
         fetchUsers();
       }
     }
-  }, [users, searchText]);
+  }, [searchText]);
+
   return (
     <div>
       <SearchUsers handleUserSearch={handleUserSearch} searchText={searchText} setSearchText={setSearchText}/>
@@ -152,7 +153,7 @@ function RenderUserTable() {
   );
 }
 
-function UserManagement() {
+function UserManagementWithContext() {
   return (
     <div>
       <h1>User Management</h1>
@@ -161,4 +162,4 @@ function UserManagement() {
   );
 }
 
-export default UserManagement;
+export default UserManagementWithContext;
